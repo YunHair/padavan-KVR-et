@@ -140,7 +140,7 @@ function button_restartvirtualhere(){
                                     <div>客户端下载地址：<a href="http://www.virtualhere.com/sites/default/files/usbclient/vhui32.exe" target="blank">【电脑客户端32位】 </a>
                                     <a href="http://www.virtualhere.com/sites/default/files/usbclient/vhui64.exe" target="blank"> 【电脑客户端64位】 </a>
                                     <a href="http://www.virtualhere.com/usb_client_software" target="blank"> 【其他客户端】</a></div>
-                                    <div>当前版本:【<% nvram_get_x("", "vhusbd_ver"); %>】 </div>
+                                    <div>当前版本:【<span style="color: #FFFF00;"><% nvram_get_x("", "vhusbd_ver"); %></span>】 </div>
                                     <span style="color:#FF0000;" class=""></span></div>
 
                                     <table width="100%" align="center" cellpadding="4" cellspacing="0" class="table">
