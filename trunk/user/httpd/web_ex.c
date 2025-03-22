@@ -4314,13 +4314,6 @@ apply_cgi(const char *url, webs_t wp)
 #endif
 		return 0;
 	}
-	else if (!strcmp(value, " Restartvhusbd "))
-	{
-#if defined(APP_VIRTUALHERE)
-		system("/usr/bin/virtualhere.sh restart &");
-#endif
-		return 0;
-	}
 	else if (!strcmp(value, " Restartwg "))
 	{
 #if defined(APP_WIREGUARD)
