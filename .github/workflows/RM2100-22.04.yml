@@ -1,4 +1,4 @@
-name: MI-RM2100
+name: MI-RM2100-22.04
 
 on: 
   workflow_dispatch:
