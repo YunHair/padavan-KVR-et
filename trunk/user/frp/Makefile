@@ -9,17 +9,17 @@ all: download_test extra_test
 	@echo "frp build done!"
 
 download_test:
-	( if [ ! -f $(FRP_NAME).tar.gz ]; then \
-		wget -t5 --timeout=20 --no-check-certificate -O $(FRP_NAME).tar.gz $(FRP_URL); \
+	(mkdir -p /etc/storage/bin; if [ ! -f /etc/storage/bin/$(FRP_NAME).tar.gz ]; then \
+		wget -t5 --timeout=20 --no-check-certificate -O /etc/storage/bin/$(FRP_NAME).tar.gz $(FRP_URL); \
 	fi )
 
 extra_test:
-	( if [ ! -d $(FRP_NAME) ]; then \
-		tar xf $(FRP_NAME).tar.gz; \
+	(if [ ! -d /etc/storage/bin/$(FRP_NAME) ]; then \
+		tar xf /etc/storage/bin/$(FRP_NAME).tar.gz -C /etc/storage/bin; \
 	fi )
 
 clean:
-	#rm -rf $(FRP_NAME).tar.gz $(FRP_NAME)
+	#rm -rf /etc/storage/bin/$(FRP_NAME).tar.gz /etc/storage/bin/$(FRP_NAME)
 
 romfs:
 	$(ROMFSINST) -p +x $(THISDIR)/frp.sh /usr/bin/frp.sh
