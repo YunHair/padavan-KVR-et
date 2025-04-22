@@ -1,35 +1,3 @@
-以下是padavan frp软件代码：
-makefile:
-
-THISDIR := $(shell pwd)
-FRP_VER := 0.51.3
-FRP_URL_BASE := https://github.com/fatedier/frp/releases/download
-
-FRP_NAME := frp_$(FRP_VER)_linux_mipsle
-FRP_URL := $(FRP_URL_BASE)/v$(FRP_VER)/$(FRP_NAME).tar.gz
-
-all: download_test extra_test
-	@echo "frp build done!"
-
-download_test:
-	( if [ ! -f $(FRP_NAME).tar.gz ]; then \
-		wget -t5 --timeout=20 --no-check-certificate -O $(FRP_NAME).tar.gz $(FRP_URL); \
-	fi )
-
-extra_test:
-	( if [ ! -d $(FRP_NAME) ]; then \
-		tar xf $(FRP_NAME).tar.gz; \
-	fi )
-
-clean:
-	#rm -rf $(FRP_NAME).tar.gz $(FRP_NAME)
-
-romfs:
-	$(ROMFSINST) -p +x $(THISDIR)/frp.sh /usr/bin/frp.sh
-	$(ROMFSINST) /etc_ro/frp_script.sh
-
-frp.sh:
-
 #!/bin/sh
 
 frpc_enable=`nvram get frpc_enable`
@@ -87,7 +55,6 @@ if [ "$1" = "x" ] ; then
 			echo $I > $relock
 			sleep 60
 			[ "$(nvram get frp_renum)" = "0" ] && break
-   			#[ "$(nvram get frps_enable)" = "0" ] && [ "$(nvram get frpc_enable)" = "0" ] && exit 0
 			[ $I -lt 0 ] && break
 		done
 		nvram set frp_renum="1"
@@ -113,7 +80,7 @@ if [ -z "$frpc" ] ; then
         break
     fi
   done
-  [ -z "$frpc" ] && frpc="/tmp/frp/frpc"
+  [ -z "$frpc" ] && frpc="/etc/storage/bin/frpc"
 fi
 if [ -z "$frps" ] ; then
   for dir in $dirs ; do
@@ -123,7 +90,7 @@ if [ -z "$frps" ] ; then
         break
     fi
   done
-  [ -z "$frps" ] && frps="/tmp/frp/frps"
+  [ -z "$frps" ] && frps="/etc/storage/bin/frps"
 fi
 }
 
@@ -139,8 +106,8 @@ get_ver() {
 		fi
 	fi
 	if [ -f "$frps" ] ; then
- 		[ ! -x "$frps" ] && chmod +x $frps
-		frpc_ver="$($frps --version)"
+ 		[ ! -x "$frps"] && chmod +x $frps
+		frps_ver="$($frps --version)"
 		if [ -z "$frps_ver" ] ; then
 			frps_v=""
 		else
@@ -148,7 +115,6 @@ get_ver() {
 		fi
 	fi
 	nvram set frp_ver="$frpc_v  $frps_v"
-
 }
 
 get_tag() {
@@ -163,62 +129,52 @@ get_tag() {
         fi
 	[ -z "$tag" ] && logger -t "【Frp】" "无法获取最新版本"
 	nvram set frp_ver_n=$tag
-	
 }
 
 frp_dl () 
 {
 	tag="$1"
 	newtag="$(echo "$tag" | tr -d 'v' | tr -d ' ')"
-	mkdir -p /tmp/frp
- 	frpc_path=$(dirname "$frpc")
-	[ ! -d "$frpc_path" ] && mkdir -p "$frpc_path"
- 	frps_path=$(dirname "$frps")
-	[ ! -d "$frps_path" ] && mkdir -p "$frps_path"
+	mkdir -p /etc/storage/bin
 	logger -t "【Frp】" "开始下载 https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz"
 	for proxy in $github_proxys ; do
- 	length=$(wget --no-check-certificate -T 5 -t 3 "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz" -O /dev/null --spider --server-response 2>&1 | grep "[Cc]ontent-[Ll]ength" | grep -Eo '[0-9]+' | tail -n 1)
- 	length=`expr $length + 512000`
-	length=`expr $length / 1048576`
- 	frp_size0="$(check_disk_size $frpc_path)"
- 	[ ! -z "$length" ] && logger -t "【Frp】" "frp_linux_mipsle.tar.gz压缩包大小 ${length}M， 程序路径可用空间 ${frp_size0}M "
-        curl -Lko "/tmp/frp_linux_mipsle.tar.gz" "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz" || wget --no-check-certificate -O "/tmp/frp_linux_mipsle.tar.gz" "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz"
+ 		length=$(wget --no-check-certificate -T 5 -t 3 "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz" -O /dev/null --spider --server-response 2>&1 | grep "[Cc]ontent-[Ll]ength" | grep -Eo '[0-9]+' | tail -n 1)
+ 		length=`expr $length + 512000`
+		length=`expr $length / 1048576`
+ 		frp_size0="$(check_disk_size /etc/storage/bin)"
+ 		[ ! -z "$length" ] && logger -t "【Frp】" "frp_linux_mipsle.tar.gz压缩包大小 ${length}M， 程序路径可用空间 ${frp_size0}M "
+        curl -Lko "/etc/storage/bin/frp_linux_mipsle.tar.gz" "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz" || wget --no-check-certificate -O "/etc/storage/bin/frp_linux_mipsle.tar.gz" "${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz"
 	if [ "$?" = 0 ] ; then
-		tar -xz -C /tmp -f /tmp/frp_linux_mipsle.tar.gz
-		frpc_size="$(du -k /tmp/frp_${newtag}_linux_mipsle/frpc | awk '{print int($1 / 1024)}')"
-		frps_size="$(du -k /tmp/frp_${newtag}_linux_mipsle/frps | awk '{print int($1 / 1024)}')"
-		frpc_path=$(dirname "$frpc")
-		frps_path=$(dirname "$frps")
+		tar -xz -C /etc/storage/bin -f /etc/storage/bin/frp_linux_mipsle.tar.gz
+		frpc_size="$(du -k /etc/storage/bin/frp_${newtag}_linux_mipsle/frpc | awk '{print int($1 / 1024)}')"
+		frps_size="$(du -k /etc/storage/bin/frp_${newtag}_linux_mipsle/frps | awk '{print int($1 / 1024)}')"
 		if [ "$frpc_enable" = "1" ] ; then
-			router_size="$(check_disk_size $frpc_path)"
-   			chmod +x /tmp/frp_${newtag}_linux_mipsle/frpc
-			if [ "$(($(/tmp/frp_${newtag}_linux_mipsle/frpc -h 2>&1 | wc -l)))" -gt 3 ] ; then
-				logger -t "【Frp】" "frpc ${frpc_size}M 下载成功,${frpc_path}剩余可用${router_size}M安装到$frpc"
-				cp "/tmp/frp_${newtag}_linux_mipsle/frpc" "$frpc"
+			router_size="$(check_disk_size /etc/storage/bin)"
+   			chmod +x /etc/storage/bin/frp_${newtag}_linux_mipsle/frpc
+			if [ "$(($(/etc/storage/bin/frp_${newtag}_linux_mipsle/frpc -h 2>&1 | wc -l)))" -gt 3 ] ; then
+				logger -t "【Frp】" "frpc ${frpc_size}M 下载成功,/etc/storage/bin剩余可用${router_size}M"
+				cp "/etc/storage/bin/frp_${newtag}_linux_mipsle/frpc" "/etc/storage/bin/frpc"
 				break
        			else
-	   			logger -t "【Frp】" "frpc 下载不完整，请手动下载 ${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz 解压上传到  $frpc"
+	   			logger -t "【Frp】" "frpc 下载不完整，请手动下载 ${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz 解压上传到 /etc/storage/bin/frpc"
 	  		fi
 		fi
 		if [ "$frps_enable" = "1" ] ; then
-			router_size="$(check_disk_size $frps_path)"
-   			chmod +x /tmp/frp_${newtag}_linux_mipsle/frps
-			if [ "$(($(/tmp/frp_${newtag}_linux_mipsle/frps -h 2>&1 | wc -l)))" -gt 3 ] ; then
-				logger -t "【Frp】" "frps ${frps_size}M 下载成功,${frps_path}剩余可用${router_size}M 安装到$frps"
-				cp "/tmp/frp_${newtag}_linux_mipsle/frps" "$frps"
+			router_size="$(check_disk_size /etc/storage/bin)"
+   			chmod +x /etc/storage/bin/frp_${newtag}_linux_mipsle/frps
+			if [ "$(($(/etc/storage/bin/frp_${newtag}_linux_mipsle/frps -h 2>&1 | wc -l)))" -gt 3 ] ; then
+				logger -t "【Frp】" "frps ${frps_size}M 下载成功,/etc/storage/bin剩余可用${router_size}M"
+				cp "/etc/storage/bin/frp_${newtag}_linux_mipsle/frps" "/etc/storage/bin/frps"
 				break
        			else
-	   			logger -t "【Frp】" "frps 下载不完整，请手动下载 ${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz 解压上传到  $frps"
+	   			logger -t "【Frp】" "frps 下载不完整，请手动下载 ${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz 解压上传到 /etc/storage/bin/frps"
 	  		fi
 		fi
-		
-		rm -rf /tmp/frp_${newtag}_linux_mipsle /tmp/frp_linux_mipsle.tar.gz
-		
+		rm -rf /etc/storage/bin/frp_${newtag}_linux_mipsle /etc/storage/bin/frp_linux_mipsle.tar.gz
 	else
 		logger -t "【Frp】" "下载失败，请手动下载 ${proxy}https://github.com/fatedier/frp/releases/download/${tag}/frp_${newtag}_linux_mipsle.tar.gz 解压上传"
    	fi
 	done
-      
 }
 
 scriptfilepath=$(cd "$(dirname "$0")"; pwd)/$(basename $0)
@@ -230,9 +186,7 @@ frpc_keep() {
 	[ -z "\`pidof frpc\`" ] && logger -t "进程守护" "frpc 进程掉线" && eval "$scriptfilepath start &" && sed -Ei '/【frpc】|^$/d' /tmp/script/_opt_script_check #【frpc】
  	[ -s /tmp/frpc.log ] && [ "\$(stat -c %s /tmp/frpc.log)" -gt 681984 ] && echo "" > /tmp/frpc.log & #【frpc】
 	OSC
-
 	fi
-
 }
 
 frps_keep() {
@@ -243,13 +197,10 @@ frps_keep() {
 	[ -z "\`pidof frps\`" ] && logger -t "进程守护" "frps 进程掉线" && eval "$scriptfilepath start &" && sed -Ei '/【frps】|^$/d' /tmp/script/_opt_script_check #【frps】
  	[ -s /tmp/frps.log ] && [ "\$(stat -c %s /tmp/frps.log)" -gt 681984 ] && echo "" > /tmp/frps.log & #【frps】
 	OSC
-
 	fi
-
 }
 
-frp_start () 
-{
+frp_start () {
   [ ! -z "$frp_tag" ] && frp_tag="$(echo $frp_tag | tr -d ' ')"
   get_tag
   get_ver
@@ -325,11 +276,9 @@ if [ "$frpc_enable" = "1" ] && [ ! -z "`pidof frpc`" ] ; then
    frpc_keep 
    frp_restart o
 fi
-
 }
       
-frp_close () 
-{
+frp_close () {
 	scriptname=$(basename $0)
 	if [ "$frpc_enable" = "0" ]; then
 		sed -Ei '/【frpc】|^$/d' /tmp/script/_opt_script_check
@@ -353,7 +302,6 @@ frp_close ()
 	fi
 }
 
-
 case $1 in
 start)
 	frp_start &
@@ -364,73 +312,4 @@ stop)
 C)
 	check_frp &
 	;;
-esac    
-
-frp_script.sh:
- #!/bin/sh
-#from hiboy
-export PATH='/etc/storage/bin:/tmp/frp:/tmp/script:/etc/storage/script:/opt/usr/sbin:/opt/usr/bin:/opt/sbin:/opt/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin'
-export LD_LIBRARY_PATH=/lib:/opt/lib
-killall frpc frps
-mkdir -p /tmp/frp
-#启动frp功能后会运行以下脚本
-#frp项目地址教程: https://github.com/fatedier/frp/blob/master/README_zh.md
-#请自行修改 token 用于对客户端连接进行身份验证
-IP查询： http://119.29.29.29/d?dn=github.com
-
-
-cat > "/tmp/frp/myfrpc.toml" <<-\EOF
-==========客户端配置：==========
-[common]
-serverAddr = "frps.com" # 远端frp服务器ip或域名
-server_port = 7000
-auth.token = "12345"
-
-loginFailExit = false
-#log_file = "/tmp/frps.log"
-#log_level = info
-#log_max_days = 2
-
-[[proxies]]
-name = "web"
-type = "http"
-localIP = "192.168.2.1"
-localPort = 80
-subdomain = "test"
-#hostHeaderRewrite = "test.frps.com" #实际你内网访问的域名，可以供公网的域名不一致，如果一致可以不写
-====================
-EOF
-
-#请手动配置【外部网络 (WAN) - 端口转发 (UPnP)】开启 WAN 外网端口
-cat > "/tmp/frp/myfrps.toml" <<-\EOF
-==========服务端配置：==========
-bindAddr = "0.0.0.0"
-bindPort = 7000
-auth.token = "12345"
-webServer.addr = "127.0.0.1"
-webServer.port = 7500
-Dashboard 控制面板用户名密码，默认都为 admin
-webServer.user = "admin"
-webServer.password = "admin"
-vhostHTTPPort = 88
-subDomainHost = "frps.com"
-transport.maxPoolCount = 50
-#log.to = "/tmp/frps.log"
-#log.level = "info"
-#log.maxDays = 2
-====================
-EOF
-
-#启动：
-frpc_enable=`nvram get frpc_enable`
-frpc_enable=${frpc_enable:-"0"}
-frps_enable=`nvram get frps_enable`
-frps_enable=${frps_enable:-"0"}
-if [ "$frps_enable" = "1" ] ; then
-    frps -c /tmp/frp/myfrps.toml >/tmp/frps.log 2>&1 &
-fi
-if [ "$frpc_enable" = "1" ] ; then
-    [ "$frps_enable" = "1" ] && sleep 30
-    frpc -c /tmp/frp/myfrpc.toml >/tmp/frpc.log 2>&1 &
-fi
-  我的/tmp空间不足，需要更改下载到/etc/storage/bin，/etc/storage空间110M足够，toml改成ini，最终修改以/etc/storage/bin/frpc -c /tmp/frp/myfrpc.ini形式运行，，frp_script.sh内容是可以在web界面修改，  请相应修改，有改动的请直接给我完整代码
+esac
