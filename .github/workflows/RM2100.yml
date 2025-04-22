@@ -39,10 +39,19 @@ jobs:
         mkdir -p /opt/images/
         
         ##### 修改内存空间和 storage空间13m
-        sed -i 's/SIZ=0x0400000/SIZ=0x0d00000/g' /opt/rt-n56u/trunk/configs/boards/RM2100/kernel-3.4.x-5.0.config
-        sed -i 's/size_etc="6M"/size_etc="13M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh
-        sed -i 's/size_tmp="24M"/size_tmp="30M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh
-        sed -i 's/mtd_part_size=65536/mtd_part_size=13631488/g' /opt/rt-n56u/trunk/user/scripts/mtd_storage.sh
+        #sed -i 's/SIZ=0x0400000/SIZ=0x0d00000/g' /opt/rt-n56u/trunk/configs/boards/RM2100/kernel-3.4.x-5.0.config
+        #sed -i 's/size_etc="6M"/size_etc="13M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh
+        #sed -i 's/size_tmp="24M"/size_tmp="30M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh
+        #sed -i 's/mtd_part_size=65536/mtd_part_size=13631488/g' /opt/rt-n56u/trunk/user/scripts/mtd_storage.sh
+        # 修改内核配置（十六进制换算）
+        sed -i 's/CONFIG_MTD_STORE_PART_SIZ=0x.*/CONFIG_MTD_STORE_PART_SIZ=0x6f00000/g' /opt/rt-n56u/trunk/configs/boards/RM2100/kernel-3.4.x-5.0.config
+
+        # 修改存储分配策略（需保留临时空间）
+        sed -i 's/size_etc="6M"/size_etc="111M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh
+        sed -i 's/size_tmp="24M"/size_tmp="30M"/g' /opt/rt-n56u/trunk/user/scripts/dev_init.sh # 可维持原修改
+
+        # 修改存储分区大小（十进制精确值）
+        sed -i 's/mtd_part_size=65536/mtd_part_size=116391936/g' /opt/rt-n56u/trunk/user/scripts/mtd_storage.sh
     - name: Build Firmware
       env:
         TNAME: RM2100
